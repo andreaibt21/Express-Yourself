@@ -2,8 +2,34 @@ let currentMode = 'expressions';
 let currentRequest = '';
 let requestInProgress = false;
 let machineIsOn = false;
+const expressionEmojis = ["😀", "😁", "😂", "😅", "😆", "😉", "😋", "😎",
+    "😍", "😥", "😭", "😱", "🤓", "😴", "🤐", "💩"];
+const animalEmojis = ["🐶", "🐱", "🐼", "🐨", "🐷", "🐵", "🐭", "🐹", "🐰",
+    "🐢", "🐸", "🐴", "🦄", "🐍", "🐙", "💩"];
+const expressionEmojisHtml = expressionEmojis.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
+const animalEmojisHtml = animalEmojis.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
+const emojiSelects = {
+  expressions: expressionEmojisHtml,
+  animals: animalEmojisHtml
+};
+
+const activeMachineImage = {
+  expressions: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/server-machine-active.svg',
+  animals: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/server-machine-animals.svg'
+};
+
+const activeSingularRouteImage = {
+  expressions: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-active.svg',
+  animals: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/animal-route-active.svg'
+};
+
+const activePluralRouteImage = {
+  expressions: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expressions-route-active.svg',
+  animals: 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/animals-route-active.svg'
+};
 
 $(document).ready(() => {
+  setMode('expressions');
   pingMachine();
   setInterval(pingMachine, 1000);
 
@@ -30,7 +56,41 @@ $(document).ready(() => {
   $('#expressions-information .button').on('click', function() {
     triggerExpressionsRequest();
   });
+
+  $('#expression-machine-type').on('click', function() {
+    setMode('expressions');
+  });
+
+  $('#animals-machine-type').on('click', function() {
+    setMode('animals');
+  });
 });
+
+function setMode(mode) {
+  if (mode !== 'expressions' && mode !== 'animals') {
+    return;
+  }
+  currentMode = mode;
+  pingMachine();
+  $('#emoji-field').html(emojiSelects[currentMode]);
+  selectExpressionMode('GET');
+}
+
+const generateRoute = (id, name, emoji) => {
+  if (id && name && emoji) {
+    return `/${currentMode}/${id}?name=${name}&emoji=${emoji}`;
+  } else if (id) {
+    return `/${currentMode}/${id}`;
+  } else if (name && emoji) {
+    return `/${currentMode}?name=${name}&emoji=${emoji}`;
+  } else {
+    return `/${currentMode}`;
+  }
+};
+
+const getInactiveMode = () => {
+  return currentMode === 'animals' ? 'expressions' : 'animals';
+};
 
 function pingMachine() {
   if (requestInProgress) {
@@ -40,18 +100,20 @@ function pingMachine() {
   $.ajax('/', {
     success: function() {
       activateMachine();
-      if($('#expression-route').attr('src') === "https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-inactive.svg") {
-        $('#expression-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-active.svg');
-        $('#expressions-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expressions-route-active.svg');
+      if ($('#expression-route').attr('src') === activeSingularRouteImage[getInactiveMode()] ||
+           $('#expression-route').attr('src') === "https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-inactive.svg") {
+        $('#expression-route').attr('src', activeSingularRouteImage[currentMode]);
+        $('#expressions-route').attr('src', activePluralRouteImage[currentMode]);
         activateExpressions();
       }
     },
     error: function(xhr) {
       if (xhr.status !== 404) {
         activateMachine();
-        if($('#expression-route').attr('src') === "https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-inactive.svg") {
-          $('#expression-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-active.svg');
-          $('#expressions-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expressions-route-active.svg');
+        if ($('#expression-route').attr('src') === activeSingularRouteImage[getInactiveMode()] ||
+           $('#expression-route').attr('src') === "https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-inactive.svg") {
+          $('#expression-route').attr('src', activeSingularRouteImage[currentMode]);
+          $('#expressions-route').attr('src', activePluralRouteImage[currentMode]);
           activateExpressions();
         }
       } else {
@@ -66,7 +128,7 @@ function pingMachine() {
 
 function activateMachine() {
   machineIsOn = true;
-  $('#server-machine').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/server-machine-active.svg');
+  $('#server-machine').attr('src', activeMachineImage[currentMode]);
   $('#beaker').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/beaker-active-neutral.svg');
 
   if ($('#lightbulb').attr('src') === 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/lightbulb-inactive.svg') {
@@ -115,11 +177,11 @@ function selectExpressionMode(mode) {
     $('#name-field').prop('readonly', true).addClass('disabled');
     $('#emoji-field').prop('disabled', true).addClass('disabled');
   } else if (mode === 'CREATE') {
-    $('#emoji-field').prop('disabled', false).removeClass('disabled').val('😀');
+    $('#emoji-field').prop('disabled', false).removeClass('disabled').val(emojiSelects[currentMode][0]);
     $('#create-expression').addClass('active');
     $('#id-field').prop('readonly', true).addClass('disabled');
   } else if (mode === 'UPDATE') {
-    $('#emoji-field').prop('disabled', false).removeClass('disabled').val('😀');
+    $('#emoji-field').prop('disabled', false).removeClass('disabled').val(emojiSelects[currentMode][0]);
     $('#update-expression').addClass('active');
   } else if (mode === 'DELETE') {
     $('#emoji-field').prop('disabled', false).removeClass('disabled').val('');
@@ -142,7 +204,7 @@ function triggerExpressionRequest() {
   const emoji = $('#emoji-field').val();
 
   $('#expression-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-pending.svg');
-  $('#expressions-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expressions-route-active.svg');
+  $('#expressions-route').attr('src', activePluralRouteImage[currentMode]);
   $('#code-number').text('');
   $('#code-description').text('');
   clearExpressionsText();
@@ -156,25 +218,25 @@ function setExpressionRequestText(id, name, emoji) {
   switch (currentRequest) {
     case 'GET':
       $('#expression-text pre').eq(0).text('GET');
-      $('#expression-text pre').eq(1).text(`/expressions/${id}`);
+      $('#expression-text pre').eq(1).text(`/${currentMode}/${id}`);
       $('#expression-text pre').eq(2).text('');
       $('#expression-text pre').eq(3).text('');
       break;
     case 'CREATE':
       $('#expression-text pre').eq(0).text('POST');
-      $('#expression-text pre').eq(1).text(`/expressions`);
+      $('#expression-text pre').eq(1).text(`/${currentMode}`);
       $('#expression-text pre').eq(2).text(`?name=${name}`);
       $('#expression-text pre').eq(3).text(`&emoji=${emoji}`);
       break;
     case 'UPDATE':
       $('#expression-text pre').eq(0).text('PUT');
-      $('#expression-text pre').eq(1).text(`/expressions/${id}`);
+      $('#expression-text pre').eq(1).text(`/${currentMode}/${id}`);
       $('#expression-text pre').eq(2).text(`?name=${name}`);
       $('#expression-text pre').eq(3).text(`&emoji=${emoji}`);
       break;
     case 'DELETE':
       $('#expression-text pre').eq(0).text('DELETE');
-      $('#expression-text pre').eq(1).text(`/expressions/${id}`);
+      $('#expression-text pre').eq(1).text(`/${currentMode}/${id}`);
       $('#expression-text pre').eq(2).text('');
       $('#expression-text pre').eq(3).text('');
       break;
@@ -196,7 +258,7 @@ function clearExpressionsText() {
 function makeExpressionRequest(id, name, emoji) {
   switch (currentRequest) {
     case 'GET':
-      $.ajax(`/expressions/${id}`, {
+      $.ajax(generateRoute(id), {
         success: function(expression) {
           animateGoodExpressionRequest('200', 'OK', expression);
         },
@@ -206,10 +268,10 @@ function makeExpressionRequest(id, name, emoji) {
       });
       break;
     case 'CREATE':
-      $.ajax(`/expressions?name=${name}&emoji=${emoji}`, {
+      $.ajax(generateRoute(null, name, emoji), {
         method: 'POST',
         success: function(expression) {
-          animateGoodExpressionRequest('201', 'OK', expression);
+          animateGoodExpressionRequest('200', 'OK', expression);
         },
         error: function() {
           animateBadExpressionRequest('400', 'Bad Request');
@@ -217,7 +279,7 @@ function makeExpressionRequest(id, name, emoji) {
       });
       break;
     case 'UPDATE':
-      $.ajax(`/expressions/${id}?name=${name}&emoji=${emoji}`, {
+      $.ajax(generateRoute(id, name, emoji), {
         method: 'PUT',
         success: function(expression) {
           animateGoodExpressionRequest('200', 'OK', expression);
@@ -228,7 +290,7 @@ function makeExpressionRequest(id, name, emoji) {
       });
       break;
     case 'DELETE':
-      $.ajax(`/expressions/${id}`, {
+      $.ajax(generateRoute(id), {
         method: 'DELETE',
         success: function() {
           animateGoodExpressionRequest('204', 'No Content');
@@ -249,7 +311,7 @@ function triggerExpressionsRequest() {
   requestInProgress = true;
   deactivateExpressions();
 
-  $('#expression-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expression-route-active.svg');
+  $('#expression-route').attr('src', activeSingularRouteImage[currentMode]);
   $('#expressions-route').attr('src', 'https://s3.amazonaws.com/codecademy-content/courses/learn-express-routes/expressions-route-pending.svg');
   $('#code-number').text('');
   $('#code-description').text('');
@@ -262,13 +324,12 @@ function triggerExpressionsRequest() {
 
 function setExpressionsRequestText() {
   $('#expressions-text pre').eq(0).text('GET');
-  $('#expressions-text pre').eq(1).text('/expressions');
+  $('#expressions-text pre').eq(1).text(`/${currentMode}`);
 }
 
 function makeExpressionsRequest() {
-  $.ajax('/expressions/', {
+  $.ajax(generateRoute(), {
     success: function(expressions) {
-      console.log(expressions)
       animateGoodExpressionsRequest('200', 'OK', expressions);
     },
     error: function() {
